@@ -211,8 +211,36 @@ void TitleWidget::showPartInfoWidget()
     }
 }
 
+bool TitleWidget::isOKRPartition(const PartitionInfo &info)
+{
+    QString label = info.m_fileSystemLabel.trimmed();
+    FSType fsType = static_cast<FSType>(info.m_fileSystemType);
+    
+    // 检查是否为受保护的分区标签
+    QStringList protectedLabels = {"okr", "lenovo_part"};
+    return protectedLabels.contains(label.toLower()) && fsType == FSType::FS_FAT32;
+}
+
+void TitleWidget::showOKRProtectionWarning(const QString &operation)
+{
+    MessageBox warningBox(this);
+    warningBox.setObjectName("messageBox");
+    warningBox.setAccessibleName("messageBox");
+    warningBox.setWarings(tr("Cannot %1 this partition").arg(operation), tr("This partition is protected and cannot be %1.").arg(operation), tr("OK"), "ok");
+    warningBox.exec();
+}
+
 void TitleWidget::showFormateInfoWidget()
 {
+    // 新增OKR保护逻辑：label为okr且文件系统为vfat时禁止擦除
+    if (DMDbusHandler::instance()->getCurLevel() == DMDbusHandler::PARTITION) {
+        PartitionInfo info = DMDbusHandler::instance()->getCurPartititonInfo();
+        if (isOKRPartition(info)) {
+            showOKRProtectionWarning(tr("wipe"));
+            return;
+        }
+    }
+
     setCurDevicePath(DMDbusHandler::instance()->getCurDevicePath());
 
     FormateDialog dlg(this);
@@ -525,6 +553,13 @@ void TitleWidget::onResizeVGClicked()
 
 void TitleWidget::onDeletePVClicked()
 {
+    // 新增OKR保护逻辑：label为okr且文件系统为vfat时禁止删除
+    PartitionInfo info = DMDbusHandler::instance()->getCurPartititonInfo();
+    if (isOKRPartition(info)) {
+        showOKRProtectionWarning(tr("delete"));
+        return;
+    }
+
     QMap<QString, VGInfo> mapVGInfo = DMDbusHandler::instance()->probLVMInfo().m_vgInfo;
     bool vgIsMount = false;
     QStringList lstVGName;

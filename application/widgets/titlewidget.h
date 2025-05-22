@@ -213,6 +213,18 @@ private slots:
      */
     void onDeletePVClicked();
 
+    /**
+     * @brief 检查是否为OKR分区
+     * @param info 分区信息
+     * @return 是否为OKR分区
+     */
+    bool isOKRPartition(const PartitionInfo &info);
+
+    /**
+     * @brief 显示OKR分区保护提示
+     * @param operation 操作类型
+     */
+    void showOKRProtectionWarning(const QString &operation);
 
 protected:
 
